@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SalesLens — Análise de Conversas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #1e1e2e;
+    --accent: #7c6aff;
+    --accent2: #ff6a6a;
+    --accent3: #6affa0;
+    --accent4: #ffd56a;
+    --text: #e8e8f0;
+    --muted: #5a5a72;
+    --subtle: #2a2a3a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* bg grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), #b06aff);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 24px rgba(124,106,255,0.4);
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .badge {
+    margin-left: auto;
+    background: var(--subtle);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* API Key section */
+  .apikey-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .apikey-wrap.valid {
+    border-color: rgba(106,255,160,0.4);
+    background: rgba(106,255,160,0.04);
+  }
+
+  .apikey-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .apikey-input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    min-width: 200px;
+    transition: border-color 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .apikey-input:focus { border-color: var(--accent); }
+  .apikey-input::placeholder { color: var(--muted); letter-spacing: 0; }
+
+  .apikey-status {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .apikey-hint {
+    width: 100%;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .apikey-hint a { color: var(--accent); text-decoration: none; }
+  .apikey-hint a:hover { text-decoration: underline; }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 20px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    background: var(--surface);
+    margin-bottom: 24px;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.06);
+    box-shadow: 0 0 40px rgba(124,106,255,0.1);
+  }
+
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    opacity: 0.7;
+  }
+
+  .upload-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .upload-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .upload-formats {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .fmt-tag {
+    background: var(--subtle);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 6px;
+  }
+
+  #fileInput { display: none; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #9d6aff);
+    color: white;
+    box-shadow: 0 4px 20px rgba(124,106,255,0.35);
+  }
+
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(124,106,255,0.5); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+  }
+
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+
+  .file-info {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .file-info-icon { font-size: 20px; flex-shrink: 0; }
+  .file-info-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-info-size { color: var(--muted); font-size: 12px; flex-shrink: 0; }
+
+  /* Progress */
+  .progress-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 32px;
+    display: none;
+  }
+
+  .progress-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    opacity: 0.3;
+    transition: all 0.4s ease;
+  }
+
+  .progress-step.active { opacity: 1; }
+  .progress-step.done { opacity: 0.6; }
+
+  .step-dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--subtle);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: all 0.4s ease;
+  }
+
+  .progress-step.active .step-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(124,106,255,0.5);
+    animation: pulse 1.5s ease infinite;
+  }
+
+  .progress-step.done .step-dot {
+    background: var(--accent3);
+    border-color: var(--accent3);
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 16px rgba(124,106,255,0.5); }
+    50% { box-shadow: 0 0 28px rgba(124,106,255,0.9); }
+  }
+
+  .step-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .step-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  /* Results */
+  #results { display: none; }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Score cards */
+  .scores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .score-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .score-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent-color, var(--accent));
+  }
+
+  .score-label {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .score-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .score-bar {
+    margin-top: 10px;
+    height: 4px;
+    background: var(--subtle);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .score-fill {
+    height: 100%;
+    background: var(--accent-color, var(--accent));
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  /* Transcript */
+  .transcript-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 32px;
+    max-height: 360px;
+    overflow-y: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #c8c8d8;
+  }
+
+  .transcript-box::-webkit-scrollbar { width: 4px; }
+  .transcript-box::-webkit-scrollbar-track { background: var(--subtle); }
+  .transcript-box::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
+
+  .speaker-label {
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-right: 6px;
+    display: inline-block;
+  }
+
+  .speaker-a { background: rgba(124,106,255,0.2); color: #a899ff; }
+  .speaker-b { background: rgba(106,255,160,0.15); color: #6affa0; }
+
+  /* Analysis cards */
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 600px) { .analysis-grid { grid-template-columns: 1fr; } }
+
+  .analysis-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+  }
+
+  .analysis-card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .analysis-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    align-items: flex-start;
+  }
+
+  .analysis-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+
+  /* Sentiment */
+  .sentiment-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 32px;
+  }
+
+  .sent-track {
+    height: 8px;
+    background: linear-gradient(to right, var(--accent2), var(--accent4), var(--accent3));
+    border-radius: 4px;
+    margin: 14px 0 8px;
+    position: relative;
+  }
+
+  .sent-needle {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: left 1s ease;
+    border: 3px solid var(--accent);
+  }
+
+  .sent-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Recommendations */
+  .rec-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 32px;
+  }
+
+  .rec-item {
+    display: flex;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--subtle);
+    font-size: 13.5px;
+    line-height: 1.5;
+    align-items: flex-start;
+  }
+
+  .rec-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .rec-num {
+    width: 24px; height: 24px;
+    background: var(--subtle);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Error */
+  .error-box {
+    background: rgba(255,106,106,0.08);
+    border: 1px solid rgba(255,106,106,0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: #ff9898;
+    font-size: 14px;
+    display: none;
+    margin-bottom: 20px;
+  }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo-icon">🔬</div>
+    <div class="logo-text">Sales<span>Lens</span></div>
+    <div class="badge">IA · PT-BR</div>
+  </header>
+
+  <!-- API Key -->
+  <div class="apikey-wrap" id="apikeyWrap">
+    <div class="apikey-label">🔑 Chave de API</div>
+    <input type="password" class="apikey-input" id="apikeyInput" placeholder="sk-ant-api03-..." oninput="onApiKeyChange(this.value)" autocomplete="off" spellcheck="false">
+    <div class="apikey-status" id="apikeyStatus" style="color:var(--muted)">— não configurada</div>
+    <div class="apikey-hint">
+      Obtenha sua chave em <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>. Ela fica salva apenas no seu navegador (localStorage).
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <span class="upload-icon">🎙️</span>
+    <div class="upload-title">Envie o áudio da conversa</div>
+    <div class="upload-sub">Arraste e solte ou clique para selecionar</div>
+    <div class="upload-formats">
+      <span class="fmt-tag">MP3</span>
+      <span class="fmt-tag">MP4</span>
+      <span class="fmt-tag">WAV</span>
+      <span class="fmt-tag">M4A</span>
+      <span class="fmt-tag">OGG</span>
+      <span class="fmt-tag">WEBM</span>
+    </div>
+    <input type="file" id="fileInput" accept="audio/*,video/mp4,video/webm">
+  </div>
+
+  <div class="controls" id="controls" style="display:none">
+    <div class="file-info">
+      <span class="file-info-icon">🎵</span>
+      <span class="file-info-name" id="fileName">—</span>
+      <span class="file-info-size" id="fileSize">—</span>
+    </div>
+    <button class="btn btn-outline" onclick="resetAll()">✕ Remover</button>
+    <button class="btn btn-primary" id="analyzeBtn" onclick="startAnalysis()">
+      ⚡ Analisar
+    </button>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-step" id="step1">
+      <div class="step-dot">1</div>
+      <div>
+        <div class="step-label">Transcrevendo áudio</div>
+        <div class="step-sub">Convertendo fala em texto…</div>
+      </div>
+    </div>
+    <div class="progress-step" id="step2">
+      <div class="step-dot">2</div>
+      <div>
+        <div class="step-label">Analisando conversa</div>
+        <div class="step-sub">Identificando padrões de venda…</div>
+      </div>
+    </div>
+    <div class="progress-step" id="step3">
+      <div class="step-dot">3</div>
+      <div>
+        <div class="step-label">Gerando relatório</div>
+        <div class="step-sub">Calculando métricas e recomendações…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <div class="section-header">
+      <div class="section-title">📊 Scores de Performance</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="scores-grid" id="scoresGrid"></div>
+
+    <div class="section-header">
+      <div class="section-title">😊 Sentimento Geral</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="sentiment-bar">
+      <div id="sentimentLabel" style="font-size:14px;font-weight:500"></div>
+      <div class="sent-track">
+        <div class="sent-needle" id="sentNeedle" style="left:50%"></div>
+      </div>
+      <div class="sent-labels"><span>Negativo</span><span>Neutro</span><span>Positivo</span></div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">📝 Transcrição</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="transcript-box" id="transcriptBox"></div>
+
+    <div class="section-header">
+      <div class="section-title">🔍 Análise Detalhada</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="analysis-grid" id="analysisGrid"></div>
+
+    <div class="section-header">
+      <div class="section-title">💡 Recomendações</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="rec-card" id="recCard"></div>
+
+    <div style="text-align:center;margin-top:32px">
+      <button class="btn btn-outline" onclick="resetAll()">🔄 Nova Análise</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let selectedFile = null;
+
+// API Key management
+function loadApiKey() {
+  try { return localStorage.getItem('saleslens_apikey') || ''; } catch { return ''; }
+}
+function saveApiKey(key) {
+  try { localStorage.setItem('saleslens_apikey', key); } catch {}
+}
+function getApiKey() {
+  return document.getElementById('apikeyInput').value.trim() || loadApiKey();
+}
+
+function onApiKeyChange(val) {
+  const trimmed = val.trim();
+  saveApiKey(trimmed);
+  const status = document.getElementById('apikeyStatus');
+  const wrap = document.getElementById('apikeyWrap');
+  if (trimmed.startsWith('sk-ant-') && trimmed.length > 20) {
+    status.textContent = '✓ configurada';
+    status.style.color = 'var(--accent3)';
+    wrap.classList.add('valid');
+  } else if (trimmed.length > 0) {
+    status.textContent = '⚠ formato inválido';
+    status.style.color = 'var(--accent4)';
+    wrap.classList.remove('valid');
+  } else {
+    status.textContent = '— não configurada';
+    status.style.color = 'var(--muted)';
+    wrap.classList.remove('valid');
+  }
+}
+
+// On load, restore saved key
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = loadApiKey();
+  if (saved) {
+    document.getElementById('apikeyInput').value = saved;
+    onApiKeyChange(saved);
+  }
+});
+
+// Drag & drop
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  selectedFile = file;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatBytes(file.size);
+  document.getElementById('controls').style.display = 'flex';
+  document.getElementById('dropZone').style.display = 'none';
+}
+
+function formatBytes(b) {
+  if (b < 1024*1024) return (b/1024).toFixed(1)+' KB';
+  return (b/1024/1024).toFixed(1)+' MB';
+}
+
+function resetAll() {
+  selectedFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('dropZone').style.display = 'block';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+  ['step1','step2','step3'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+  });
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('step'+i);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+}
+
+function showError(msg) {
+  const b = document.getElementById('errorBox');
+  b.textContent = '⚠️ ' + msg;
+  b.style.display = 'block';
+}
+
+async function startAnalysis() {
+  if (!selectedFile) return;
+
+  const apiKey = getApiKey();
+  if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+    showError('Configure uma chave de API válida antes de analisar. Obtenha em console.anthropic.com');
+    document.getElementById('apikeyInput').focus();
+    return;
+  }
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⚙️</span> Processando…';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+
+  const wrap = document.getElementById('progressWrap');
+  wrap.style.display = 'block';
+  setStep(1);
+
+  try {
+    // Convert audio to base64
+    const base64Audio = await fileToBase64(selectedFile);
+
+    // Step 1: Transcribe
+    setStep(1);
+    const transcript = await transcribeAudio(base64Audio, selectedFile.type, apiKey);
+
+    // Step 2: Analyze
+    setStep(2);
+    await sleep(600);
+    const analysis = await analyzeTranscript(transcript, apiKey);
+
+    // Step 3: Render
+    setStep(3);
+    await sleep(400);
+
+    wrap.style.display = 'none';
+    renderResults(transcript, analysis);
+
+  } catch (err) {
+    wrap.style.display = 'none';
+    showError(err.message || 'Erro inesperado. Tente novamente.');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Analisar';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Falha ao ler arquivo'));
+    r.readAsDataURL(file);
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function transcribeAudio(base64, mimeType, apiKey) {
+  const validAudioTypes = ['audio/mp3','audio/mpeg','audio/wav','audio/ogg','audio/webm','audio/mp4','audio/m4a','video/mp4','video/webm'];
+  const mediaType = validAudioTypes.includes(mimeType) ? mimeType : 'audio/mpeg';
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'document',
+            source: { type: 'base64', media_type: mediaType, data: base64 }
+          },
+          {
+            type: 'text',
+            text: `Você é um assistente especializado em transcrição. Transcreva EXATAMENTE e completamente o áudio fornecido em português.
+
+Formato da transcrição:
+- Identifique os falantes como "Vendedor:" e "Cliente:" (ou "Pessoa A:" e "Pessoa B:" se não for possível identificar)
+- Separe cada fala em uma linha nova
+- Se houver silêncios longos, indique com [pausa]
+- Se a fala for inaudível, indique com [inaudível]
+- Mantenha marcadores de tempo aproximados entre colchetes ex: [00:00] a cada ~30 segundos
+
+Retorne APENAS a transcrição, sem comentários adicionais.`
+          }
+        ]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Erro na API (${response.status})`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.map(b => b.text || '').join('') || '';
+  if (!text.trim()) throw new Error('Transcrição vazia. Verifique se o áudio é válido.');
+  return text;
+}
+
+async function analyzeTranscript(transcript, apiKey) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: `Você é um especialista em análise de conversas de vendas. Analise a transcrição abaixo e retorne APENAS um JSON válido (sem markdown, sem texto extra).
+
+TRANSCRIÇÃO:
+${transcript}
+
+Retorne este JSON exato:
+{
+  "scores": {
+    "geral": <0-100>,
+    "rapport": <0-100>,
+    "escuta_ativa": <0-100>,
+    "apresentacao_produto": <0-100>,
+    "tratamento_objecoes": <0-100>,
+    "fechamento": <0-100>
+  },
+  "sentimento": {
+    "geral": "<Muito Positivo|Positivo|Neutro|Negativo|Muito Negativo>",
+    "score": <0-100, onde 0=muito negativo, 50=neutro, 100=muito positivo>,
+    "descricao": "<uma frase descrevendo o tom>"
+  },
+  "pontos_positivos": ["<item1>","<item2>","<item3>"],
+  "pontos_melhoria": ["<item1>","<item2>","<item3>"],
+  "objecoes_identificadas": ["<objecao1>","<objecao2>"],
+  "tecnicas_utilizadas": ["<tecnica1>","<tecnica2>"],
+  "recomendacoes": ["<rec1 detalhada>","<rec2 detalhada>","<rec3 detalhada>","<rec4 detalhada>"],
+  "resumo_executivo": "<2-3 frases resumindo a conversa e resultado>"
+}`
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Erro na análise (${response.status})`);
+  }
+
+  const data = await response.json();
+  const raw = data.content?.map(b => b.text || '').join('') || '';
+  const clean = raw.replace(/```json|```/g, '').trim();
+
+  try {
+    return JSON.parse(clean);
+  } catch {
+    throw new Error('Falha ao interpretar análise da IA. Tente novamente.');
+  }
+}
+
+function renderResults(transcript, analysis) {
+  const { scores, sentimento, pontos_positivos, pontos_melhoria, objecoes_identificadas, tecnicas_utilizadas, recomendacoes } = analysis;
+
+  // Scores
+  const scoreConfig = [
+    { key: 'geral', label: 'Score Geral', color: '#7c6aff' },
+    { key: 'rapport', label: 'Rapport', color: '#6affa0' },
+    { key: 'escuta_ativa', label: 'Escuta Ativa', color: '#ffd56a' },
+    { key: 'apresentacao_produto', label: 'Apresentação', color: '#6ab8ff' },
+    { key: 'tratamento_objecoes', label: 'Objeções', color: '#ff6a6a' },
+    { key: 'fechamento', label: 'Fechamento', color: '#ff9d6a' },
+  ];
+
+  document.getElementById('scoresGrid').innerHTML = scoreConfig.map(cfg => {
+    const val = scores[cfg.key] ?? 0;
+    return `<div class="score-card" style="--accent-color:${cfg.color}">
+      <div class="score-label">${cfg.label}</div>
+      <div class="score-value" style="color:${cfg.color}">${val}<span style="font-size:18px;opacity:0.5"> /100</span></div>
+      <div class="score-bar"><div class="score-fill" style="width:${val}%;background:${cfg.color}"></div></div>
+    </div>`;
+  }).join('');
+
+  // Sentimento
+  const sScore = sentimento.score ?? 50;
+  document.getElementById('sentimentLabel').innerHTML = `<strong>${sentimento.geral}</strong> — ${sentimento.descricao}`;
+  setTimeout(() => { document.getElementById('sentNeedle').style.left = sScore + '%'; }, 100);
+
+  // Transcript
+  const formatted = transcript
+    .split('\n')
+    .map(line => {
+      if (line.startsWith('Vendedor:') || line.startsWith('Agente:') || line.startsWith('Pessoa A:')) {
+        return line.replace(/^(Vendedor|Agente|Pessoa A):/, m => `<span class="speaker-label speaker-a">${m.replace(':','')}</span>`);
+      }
+      if (line.startsWith('Cliente:') || line.startsWith('Pessoa B:')) {
+        return line.replace(/^(Cliente|Pessoa B):/, m => `<span class="speaker-label speaker-b">${m.replace(':','')}</span>`);
+      }
+      return `<span style="color:var(--muted)">${line}</span>`;
+    })
+    .join('<br>');
+  document.getElementById('transcriptBox').innerHTML = formatted || transcript.replace(/\n/g, '<br>');
+
+  // Analysis grid
+  const cards = [
+    { title: '✅ Pontos Positivos', color: '#6affa0', items: pontos_positivos || [] },
+    { title: '⚠️ Pontos de Melhoria', color: '#ffd56a', items: pontos_melhoria || [] },
+    { title: '🚧 Objeções Identificadas', color: '#ff6a6a', items: objecoes_identificadas || [] },
+    { title: '🛠️ Técnicas Utilizadas', color: '#6ab8ff', items: tecnicas_utilizadas || [] },
+  ];
+
+  document.getElementById('analysisGrid').innerHTML = cards.map(card => `
+    <div class="analysis-card">
+      <div class="analysis-card-title" style="color:${card.color}">${card.title}</div>
+      ${card.items.length ? card.items.map(item => `
+        <div class="analysis-item">
+          <div class="analysis-dot" style="background:${card.color}"></div>
+          <div>${item}</div>
+        </div>`).join('') : '<div style="color:var(--muted);font-size:13px">Nenhum identificado</div>'}
+    </div>`).join('');
+
+  // Recommendations
+  document.getElementById('recCard').innerHTML = (recomendacoes || []).map((rec, i) => `
+    <div class="rec-item">
+      <div class="rec-num">${String(i+1).padStart(2,'0')}</div>
+      <div>${rec}</div>
+    </div>`).join('');
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
